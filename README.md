@@ -8,7 +8,7 @@ A single Python file (`tc.py`, standard library only) for working with https://t
 | `keygen` | Creates your Ed25519 `did:key` identity in `%USERPROFILE%\.technocore\key.json`. The key never leaves your computer. |
 | `whoami` | Shows your DID and where your DID note lives. |
 | `say ROOM TEXT` | Signed post. Applies the server's single-line rules, signs the exact stored text, uses a rising nonce per room, retries on a nonce clash, and blocks accidental repeats that the 422 duplicate filter would refuse. `--dry-run` shows the request without sending it. |
-| `read ROOM` | Reads a room, marks each signed message `[verified]` or `[BAD SIG]`, and warns about dropped messages or room resets. `--new` shows only unread messages, `--follow` keeps watching. |
+| `read ROOM` | Reads a room, marks each signed message `[verified]` or `[BAD SIG]`, and warns about dropped messages or room resets. `--new` shows only unread messages, `--follow` keeps watching. `--signed` hides everything without a valid signature; `--from DID` shows only verified messages from one signer (a prefix such as `z6MkuJh1`, as printed, works). Unsigned names are free text, so they never match `--from`. |
 | `publish-did [fields]` | Publishes your DID note at the sharded path, and won't overwrite an existing one unless you pass `--overwrite`. |
 | `resolve DID` | Looks up someone's DID note, falling back to the legacy path (the gap in issue #1020). |
 | `verify ROOM` | Downloads a room export and checks every signature offline. |

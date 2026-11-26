@@ -273,6 +273,7 @@ def cmd_read(a, api):
     check_name(a.room)
     state = _load(STATE_FILE, {})
     cur = state.setdefault("cursors", {}).get(a.room)
+    frm = a.from_did and (a.from_did if a.from_did.startswith("did:key:") else "did:key:" + a.from_did)
     since = a.since if a.since is not None else (cur["last_seq"] if cur and a.new else None)
     while True:
         query = {"format": "json", "limit": a.limit}
@@ -288,11 +289,16 @@ def cmd_read(a, api):
             print(f"! gap: messages {since + 1}..{d['first_seq'] - 1} were dropped by the ring", file=sys.stderr)
         if since is not None and d.get("last_seq", 0) < since:
             print("! room reset: seq went backwards (room was reaped and recreated)", file=sys.stderr)
+        hidden = 0
         for m in d.get("messages", []):
-            mark = ""
-            if m.get("sig"):
-                mark = " [verified]" if verify_record(a.room, m) else " [BAD SIG]"
+            ok = verify_record(a.room, m) if m.get("sig") else None
+            if not keep(m, ok, frm, a.signed):
+                hidden += 1
+                continue
+            mark = "" if ok is None else (" [verified]" if ok else " [BAD SIG]")
             print(f"#{m['seq']} {m.get('ts', '')} <{short(m['from'])}>{mark} {m['text']}")
+        if hidden:
+            print(f"({hidden} hidden by filter)", file=sys.stderr)
         since = d.get("last_seq", since)
         state["cursors"][a.room] = {"last_seq": since, "checked": int(time.time())}
         _save(STATE_FILE, state)
@@ -300,6 +306,13 @@ def cmd_read(a, api):
             break
         if d.get("wait_held") is False:
             time.sleep(5)
+
+def keep(m, ok, frm, signed):
+    """--signed: only verified signatures. --from: only verified messages whose DID starts with frm.
+    Unsigned 'from' is a free nickname, so it can never satisfy --from."""
+    if (signed or frm) and not ok:
+        return False
+    return not frm or m["from"].startswith(frm)
 
 def short(frm):
     return frm[:16] + "…" + frm[-4:] if frm.startswith("did:key:") else "~" + frm
@@ -441,6 +454,10 @@ def cmd_selftest(a, api):
     assert sweep(" a\nb​c  ") == "a b c"
     m = {"from": did, "nonce": "1", "text": "hi", "sig": s}
     assert verify_record("lobby", m) and not verify_record("other", m)
+    nick = {"from": "bob", "text": "hi"}
+    assert keep(nick, None, None, False) and not keep(nick, None, None, True)
+    assert keep(m, True, did, False) and keep(m, True, did[:16], True)
+    assert not keep(m, True, "did:key:z6MkX", False) and not keep(m, False, did, False)
     print(f"selftest ok (backend: {'cryptography' if _HAVE_CRYPTO else 'pure-python'})")
 
 def main(argv=None):
@@ -452,7 +469,9 @@ def main(argv=None):
     s = sub.add_parser("read", help="read a room (verifies signatures)")
     s.add_argument("room"); s.add_argument("--since", type=int); s.add_argument("--limit", type=int, default=50)
     s.add_argument("--new", action="store_true", help="only messages since your last read")
-    s.add_argument("--follow", action="store_true", help="keep long-polling"); s.set_defaults(fn=cmd_read)
+    s.add_argument("--follow", action="store_true", help="keep long-polling")
+    s.add_argument("--from", dest="from_did", metavar="DID", help="only verified messages from this DID (a prefix like z6MkuJh1 works)")
+    s.add_argument("--signed", action="store_true", help="only messages with a valid signature"); s.set_defaults(fn=cmd_read)
     s = sub.add_parser("say", help="post a signed message (or --unsigned --nick NAME)")
     s.add_argument("room"); s.add_argument("text", nargs="+")
     s.add_argument("--unsigned", action="store_true"); s.add_argument("--nick")
