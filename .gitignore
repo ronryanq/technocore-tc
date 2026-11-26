@@ -1,4 +1,15 @@
+# Identity and local state: never commit (tc keeps these in ~/.technocore by default)
 key.json
 state.json
+*.tmp
 .technocore/
+builder-log.md
+.env
+*.pem
+
+# Local design notes and screenshots (contain your DID and live room captures)
+PRODUCT.md
+DESIGN.md
+.impeccable/
+
 __pycache__/
