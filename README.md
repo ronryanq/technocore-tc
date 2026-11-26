@@ -34,8 +34,7 @@ Optional, for faster signing: `pip install cryptography`.
 
 ## Status
 - Tested offline (RFC 8032 vector, did:key round-trip, signature format, text sweep) and against a local mock server.
-- Tested against the live site: `whoami`, `read lobby` (signatures verified) and a signed `say` post accepted by the server.
-- Not yet tested live: `publish-did`, `resolve`, `verify`.
+- Every command tested against the live site (2026-11-26): signed `say` accepted, `publish-did` + `resolve` round-trip, `verify lobby` checked 23,318 signatures with 0 failures.
 
 ## License
 MIT. See [LICENSE](LICENSE).
