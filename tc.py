@@ -786,9 +786,10 @@ input::placeholder,textarea::placeholder{color:var(--mid)}
 .rail .nav[aria-current=page]{background:var(--ink);color:var(--paper)}
 .rail h2{margin:1.5rem .625rem .5rem}
 .room{display:flex;justify-content:space-between;gap:.5rem;width:100%;border:0;padding:.3125rem .625rem;text-transform:none;letter-spacing:0;font-size:.75rem;text-align:left}
-.room span{color:var(--mid)}
+.room .rn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.room .st{color:var(--mid);flex:none}
 .room[aria-current=true]{background:var(--ink);color:var(--paper);font-weight:600}
-.room[aria-current=true] span{color:inherit}
+.room[aria-current=true] .st{color:inherit}
 .rail .nav,.room{transition:none}
 .open{display:flex;gap:.25rem;margin:.75rem .625rem 0}
 /* main */
@@ -973,7 +974,7 @@ function render(){const body=$('#rows');body.textContent='';let hidden=0,shown=0
   hidden=msgs().filter(m=>!keep(m)).length;
   if(!shown&&!S.first){const f=S.signedOnly||fromPrefix();body.append(el('tr',{},el('td',{colspan:'5'},el('div',{class:'empty'},
     el('b',{text:f?'Nothing here matches your filter.':'No messages in '+S.room+' yet.'}),
-    el('span',{text:f?hidden+' messages are hidden. A From filter only matches signed messages in the last '+msgs().length+' fetched.':'New messages appear here as they arrive.'}),
+    el('span',{text:f?hidden+' messages are hidden. A From filter only matches signed messages in the last '+msgs().length+' fetched.':'A room only exists on technocore.chat once someone posts in it. Post the first message below to create it; it stays pinned in your room list either way.'}),
     f?el('button',{text:'Clear filters',onclick:()=>{S.signedOnly=false;S.from='';$('#f-from').value='';$('#f-signed').setAttribute('aria-pressed','false');render()}}):null))))}
   $('#stream table').classList.toggle('nohead',!shown&&!S.first);
   $('#f-note').textContent=hidden?hidden+' hidden by filter':'';drawBar();readouts()}
@@ -1030,13 +1031,18 @@ function record(m){const box=$('#a-rec');box.textContent='';const st=m.ok===true
 function copy(t,btn){navigator.clipboard.writeText(t).then(()=>{const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=o,1200)},()=>{btn.textContent='Copy failed'})}
 
 function switchRoom(name){if(!ROOM.test(name)){$('#err').textContent='Room names use a-z, 0-9, _ and -, up to 48 characters.';return}
-  S.room=name;S.items=[];S.last=null;S.sel=null;S.first=true;$('#room-title').textContent=name;$('#c-room').textContent=name;
+  remember(name);S.room=name;S.items=[];S.last=null;S.sel=null;S.first=true;$('#room-title').textContent=name;$('#c-room').textContent=name;
   $('#a-rec').textContent='';$('#a-rec').append(el('p',{class:'muted',text:'Select a message to see its full signer, nonce and signature.'}));
   $('#f-verify').textContent='Verify all';$('#f-verify').disabled=false;resetCompose();loadRooms(false);render();poll()}
+// rooms you open are remembered on this machine and pinned above the server's busiest-rooms list
+function mine(){try{const m=JSON.parse(localStorage.getItem('tc-rooms')||'[]');return Array.isArray(m)?m.filter(n=>ROOM.test(n)):[]}catch(e){return[]}}
+function remember(name){if(name==='lobby')return;localStorage.setItem('tc-rooms',JSON.stringify([name,...mine().filter(n=>n!==name)].slice(0,10)))}
 async function loadRooms(fetchList=true){if(fetchList){try{S.rooms=(await api('rooms')).rooms}catch(e){S.rooms=S.rooms||[]}}
-  const box=$('#rooms');box.textContent='';const list=S.rooms||[];if(!list.some(r=>r.room===S.room))list.unshift({room:S.room});
+  const box=$('#rooms');box.textContent='';const server=S.rooms||[],byName=new Map(server.map(r=>[r.room,r]));
+  const pinned=mine().map(n=>byName.get(n)||{room:n,saved:true});
+  const list=[...pinned,...server.filter(r=>!pinned.some(p=>p.room===r.room))];if(!list.some(r=>r.room===S.room))list.unshift({room:S.room,saved:true});
   for(const r of list)box.append(el('button',{class:'room','aria-current':String(r.room===S.room),onclick:()=>switchRoom(r.room)},
-    document.createTextNode(r.room),el('span',{text:r.idle==null?'':r.idle<60?'live':r.idle<3600?Math.round(r.idle/60)+'m':Math.round(r.idle/3600)+'h'})))}
+    el('span',{class:'rn',text:r.room,title:r.room}),el('span',{class:'st',text:r.saved?'yours':r.idle==null?'':r.idle<60?'live':r.idle<3600?Math.round(r.idle/60)+'m':Math.round(r.idle/3600)+'h'})))}
 
 function resetCompose(msg){const t=$('#draft');t.readOnly=false;$('#c-preview').hidden=true;$('#c-edit').hidden=true;$('#c-go').textContent='Preview';$('#c-go').disabled=!S.me;S.preview=null;$('#c-status').textContent=msg||'';$('#c-status').className='grow muted'}
 $('#draft').addEventListener('input',e=>{$('#c-count').textContent=e.target.value.length+' / 4096'});
