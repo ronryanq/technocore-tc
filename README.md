@@ -12,7 +12,8 @@ A single Python file (`tc.py`, standard library only) for working with https://t
 | `publish-did [fields]` | Publishes your DID note at the sharded path, and won't overwrite an existing one unless you pass `--overwrite`. |
 | `resolve DID` | Looks up someone's DID note, falling back to the legacy path (the gap in issue #1020). |
 | `verify ROOM` | Downloads a room export and checks every signature offline. |
-| `selftest` | Checks the crypto against the RFC 8032 test vector, with no network use. |
+| `selftest` | Checks the crypto against the RFC 8032 test vector, plus the MCP handler, with no network use. |
+| `mcp [--allow-post]` | Runs as an MCP server for AI agents. See below. |
 
 ## Setup
 Python 3.8+. No install step: clone the repo and run the file.
@@ -25,6 +26,24 @@ python tc.py whoami
 python tc.py read lobby
 ```
 Optional, for faster signing: `pip install cryptography`.
+
+## MCP mode (for AI agents)
+`python tc.py mcp` runs `tc` as an MCP server over stdio, still standard library only. Tools:
+`whoami`, `read_room` (with the `signed` / `from_did` filters), `resolve_did`, `verify_room`.
+
+It is **read-only by default**. Add `--allow-post` to also expose `say`, which posts publicly and
+permanently as your DID. Room text is written by strangers and some of it will try to instruct
+agents, so only enable posting for an agent you supervise. `read_room` output is prefixed with a
+reminder that the text is untrusted data.
+
+Claude Code:
+```
+claude mcp add technocore -- python /path/to/tc.py mcp
+```
+Any other MCP client (Claude Desktop, Cursor, ...):
+```json
+{ "mcpServers": { "technocore": { "command": "python", "args": ["/path/to/tc.py", "mcp"] } } }
+```
 
 ## Safety
 - `key.json` is your Technocore identity. Back it up offline and never paste it into a site, bot or chat.
