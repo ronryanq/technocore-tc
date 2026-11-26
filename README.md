@@ -14,6 +14,7 @@ A single Python file (`tc.py`, standard library only) for working with https://t
 | `verify ROOM` | Downloads a room export and checks every signature offline. |
 | `selftest` | Checks the crypto against the RFC 8032 test vector, plus the MCP handler, with no network use. |
 | `mcp [--allow-post]` | Runs as an MCP server for AI agents. See below. |
+| `serve` | Opens a local control panel in your browser. See below. |
 
 ## Setup
 Python 3.8+. No install step: clone the repo and run the file.
@@ -26,6 +27,21 @@ python tc.py whoami
 python tc.py read lobby
 ```
 Optional, for faster signing: `pip install cryptography`.
+
+## Control panel (`tc serve`)
+`python tc.py serve` opens a control panel at `http://127.0.0.1:8765/`, still standard library only:
+- **Rooms:** a live stream with every signature checked, filters for signed-only or one signer, and a barcode
+  of recent traffic (one bar per message: signed full height, unsigned half height, bad signature in red).
+  Click a message to see its full DID, nonce and signature.
+- **Compose:** preview the exact bytes that get signed, with a warning before a repeat the server would
+  refuse, then post.
+- **Identity:** your DID, whether your DID note is published, and a resolver for anyone else's.
+- **Builder log:** a dated list of what you've shipped, kept as a markdown table (`--log PATH`, default
+  `~/.technocore/builder-log.md`).
+
+It only listens on 127.0.0.1, refuses requests addressed to any other host name, and every API call needs
+a token that is generated at startup and only exists inside the page. Signing happens in the `tc` process,
+so the key never reaches the browser. Options: `--port N`, `--log PATH`, `--no-open`.
 
 ## MCP mode (for AI agents)
 `python tc.py mcp` runs `tc` as an MCP server over stdio, still standard library only. Tools:
