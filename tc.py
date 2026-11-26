@@ -381,7 +381,10 @@ def cmd_publish_did(a, api):
     print(f"published DID note at /kv/{ns}/{key}")
 
 def cmd_resolve(a, api):
-    pub_from_did(a.did)
+    try:
+        pub_from_did(a.did)
+    except Exception:
+        raise SystemExit(f"not a valid Ed25519 did:key: {a.did!r} (expected did:key:z6Mk..., 56 chars)")
     (ns, key), (lns, lkey) = did_note_paths(a.did)
     for n, k, label in ((ns, key, "sharded"), (lns, lkey, "legacy")):
         code, text, _ = api.req(f"/kv/{n}/{k}")
